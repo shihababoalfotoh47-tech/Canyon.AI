@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canyon AI</title>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#141e2e', 900: '#0f172a', 950: '#020617' },
+                        primary: '#0ea5e9',
+                        neon: '#38bdf8'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Neon and Glassmorphism */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            color: #e2e8f0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.4);
+        }
+
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .neon-glow:focus-within {
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.3);
+            border-color: rgba(56, 189, 248, 0.5);
+        }
+
+        /* Message Animations */
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-message {
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        /* Loader */
+        .typing-dot {
+            animation: pulse 1.5s infinite steps(1);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .modal-bg {
+            backdrop-filter: blur(6px);
+        }
+    </style>
+</head>
+
+<body class="h-screen w-full flex flex-col overflow-hidden text-slate-200">
+    <!-- Navbar -->
+    <header
+        class="h-16 flex items-center justify-between px-6 border-b border-slate-800 glass-panel shrink-0 z-20 w-full relative">
+        <div class="flex items-center space-x-2">
+            <svg class="w-8 h-8 text-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z">
+                </path>
+            </svg>
+            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon to-blue-500">Canyon AI
+            </h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <!-- Settings Modal Trigger -->
+            <button id="open-settings-btn"
+                class="flex items-center text-slate-400 hover:text-neon transition px-2 py-1 rounded bg-slate-800/50 hover:bg-slate-800 border border-transparent hover:border-neon/30 text-sm">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+                    </path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                API Tokens
+            </button>
+            <div
+                class="text-xs font-mono text-slate-500 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800">
+                v2.0 (Multi-Provider)
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout: Split View -->
+    <main class="flex-grow flex flex-col md:flex-row overflow-hidden w-full relative z-0">
+        <!-- Glow accents behind layout -->
+        <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[120px] pointer-events-none">
+        </div>
+        <div
+            class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none">
+        </div>
+
+        <!-- Left Panel: Chat Interface -->
+        <section
+            class="flex-grow flex flex-col min-w-0 md:w-2/3 border-r border-slate-800/50 relative z-10 p-2 md:p-6 pb-0">
+            <!-- Messages Container -->
+            <div id="chat-container" class="flex-grow overflow-y-auto pr-2 space-y-6 pb-40">
+                <!-- Welcome Message -->
+                <div class="flex space-x-4 animate-message py-4">
+                    <div
+                        class="w-9 h-9 rounded-xl bg-slate-800/80 flex items-center justify-center shrink-0 border border-slate-700 shadow-md">
+                        <svg class="w-5 h-5 text-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-medium text-slate-100 mb-1">Canyon AI</div>
+                        <div class="text-slate-300 leading-relaxed text-base pt-1">
+                            Hello. I've been upgraded with **Automatic Fallback** and **LocalStorage Token Saving**.
+                            Click "API Tokens" in the top right to safely save your API keys to your browser.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fade overlay for input -->
+            <div
+                class="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#020617] to-transparent pointer-events-none z-10">
+            </div>
+
+            <!-- Input Area -->
+            <div class="absolute bottom-0 left-0 right-0 p-4 md:p-6 md:pb-8 z-20">
+                <form id="chat-form"
+                    class="max-w-4xl mx-auto relative glass-panel rounded-2xl neon-glow flex items-end">
+                    <textarea id="prompt-input" rows="1"
+                        class="w-full bg-transparent border-none outline-none resize-none py-4 px-5 pr-14 text-slate-100 placeholder-slate-500 rounded-2xl overflow-y-auto max-h-36 text-base"
+                        placeholder="Ask anything..."></textarea>
+                    <button type="submit" id="send-btn"
+                        class="absolute right-3 bottom-2.5 p-2 bg-slate-800 hover:bg-slate-700 hover:text-white text-neon rounded-xl transition duration-200 focus:outline-none disabled:opacity-50">
+                        <svg class="w-5 h-5 translate-x-[1px]" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z">
+                            </path>
+                        </svg>
+                    </button>
+                </form>
+                <div class="text-center flex justify-center space-x-6 mt-3 text-xs text-slate-500/80 font-medium">
+                    <span>Context Window: Optimized <svg class="inline-block w-3 h-3 text-green-400 mb-0.5 ml-1"
+                            fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clip-rule="evenodd"></path>
+                        </svg></span>
+                    <span>Canyon AI can make mistakes.</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Sources & Context -->
+        <aside
+            class="hidden md:flex w-1/3 flex-col bg-[#050b14]/80 backdrop-blur-sm z-10 p-6 overflow-y-auto border-l border-slate-800/30 shadow-2xl">
+            <h2 class="text-sm font-bold text-slate-300 mb-6 flex items-center uppercase tracking-wider">
+                <svg class="w-4 h-4 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                    </path>
+                </svg>
+                Research & Sources
+            </h2>
+
+            <!-- Loading State for Sources -->
+            <div id="sources-loader" class="hidden flex flex-col space-y-4 mb-6">
+                <div class="h-5 bg-slate-800/60 rounded animate-pulse w-3/4"></div>
+                <div class="h-4 bg-slate-800/50 rounded animate-pulse w-full"></div>
+                <div class="h-4 bg-slate-800/50 rounded animate-pulse w-5/6"></div>
+            </div>
+
+            <!-- Discovered Sources List -->
+            <div id="sources-container" class="space-y-4">
+                <div class="flex flex-col items-center justify-center text-slate-500 text-sm py-16 h-full text-center">
+                    <svg class="w-10 h-10 mb-3 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Sources will appear here once a query is made.
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Settings Modal (Local Token Storage) -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden flex justify-center items-center p-4">
+        <div class="absolute inset-0 bg-black/60 modal-bg" id="close-settings-bg"></div>
+        <div
+            class="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-message">
+            <h2 class="text-xl font-bold text-slate-100 mb-2">API Tokens & Configurations</h2>
+            <p class="text-xs text-slate-400 mb-6">These tokens are saved securely in your browser's <code
+                    class="text-neon bg-slate-800 px-1 rounded">localStorage</code> and never sent directly to our
+                servers. Ideal for GitHub Pages deployment.</p>
+
+            <form id="settings-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1"
+                        for="openrouter-key">OpenRouter API Key (Primary)</label>
+                    <input type="password" id="openrouter-key"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon text-sm transition"
+                        placeholder="sk-or-v1-...">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1"
+                        for="gemini-key">Google Gemini Key (Fallback 1)</label>
+                    <input type="password" id="gemini-key"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon text-sm transition"
+                        placeholder="AIzaSy...">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1"
+                        for="groq-key">Groq API Key (Fallback 2)</label>
+                    <input type="password" id="groq-key"
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-neon focus:ring-1 focus:ring-neon text-sm transition"
+                        placeholder="gsk_...">
+                </div>
+
+                <div class="pt-4 flex justify-end space-x-3 border-t border-slate-800 mt-6">
+                    <button type="button" id="close-settings-btn"
+                        class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition">Cancel</button>
+                    <button type="submit"
+                        class="px-5 py-2 rounded-lg text-sm font-bold text-slate-900 bg-neon hover:bg-primary transition shadow-[0_0_15px_rgba(56,189,248,0.4)]">Save
+                        Tokens</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        /**
+         * Canyon AI v2.0
+         * Features: Token Saving (LocalStorage), Context History Optimization, and Multi-Provider Fallbacks.
+         */
+
+        // ================= Local Storage Manager =================
+        const Storage = {
+            get: (key) => localStorage.getItem('canyon_' + key) || '',
+            set: (key, value) => { if (value) localStorage.setItem('canyon_' + key, value); }
+        };
+
+        // DOM Nodes for Settings Modal
+        const settingsModal = document.getElementById('settings-modal');
+        const openSettingsBtn = document.getElementById('open-settings-btn');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const closeSettingsBg = document.getElementById('close-settings-bg');
+        const settingsForm = document.getElementById('settings-form');
+
+        // Settings Input Nodes
+        const inOpenRouter = document.getElementById('openrouter-key');
+        const inGemini = document.getElementById('gemini-key');
+        const inGroq = document.getElementById('groq-key');
+
+        // Toggle Settings Modal
+        function showSettings(show) {
+            if (show) {
+                // Populate current saved values
+                inOpenRouter.value = Storage.get('openrouter');
+                inGemini.value = Storage.get('gemini');
+                inGroq.value = Storage.get('groq');
+                settingsModal.classList.remove('hidden');
+            } else {
+                settingsModal.classList.add('hidden');
+            }
+        }
+
+        openSettingsBtn.addEventListener('click', () => showSettings(true));
+        closeSettingsBtn.addEventListener('click', () => showSettings(false));
+        closeSettingsBg.addEventListener('click', () => showSettings(false));
+
+        settingsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            Storage.set('openrouter', inOpenRouter.value.trim());
+            Storage.set('gemini', inGemini.value.trim());
+            Storage.set('groq', inGroq.value.trim());
+            showSettings(false);
+
+            // Render a success message
+            appendMessage('assistant', '*System:* Settings Saved successfully. Your API tokens are active and saved securely in your browser cache.');
+        });
+
+        // ================= Context Storage & Optimization =================
+        // To save LLM tokens (money), we only keep the last 5 turns in memory.
+        const MAX_HISTORY_TURNS = 5;
+        let chatHistory = [];
+
+        function buildOptimizedContextArray(systemPrompt, newQuery) {
+            // Start with System Prompt
+            const optimizedPayload = [{ role: 'system', content: systemPrompt }];
+            // Append short history to save tokens
+            const recentHistory = chatHistory.slice(-MAX_HISTORY_TURNS);
+            recentHistory.forEach(msg => optimizedPayload.push(msg));
+            // Add current query
+            optimizedPayload.push({ role: 'user', content: newQuery });
+            return optimizedPayload;
+        }
+
+        // ================= Multi-Provider Config Engine =================
+        function getProviders() {
+            return [
+                {
+                    name: 'OpenRouter (GPT-4o Mini)',
+                    id: 'openrouter',
+                    url: 'https://openrouter.ai/api/v1/chat/completions',
+                    apiKey: Storage.get('openrouter'), // Get dynamically from saved tokens
+                    formatPayload: (systemContext, userQuery) => ({
+                        model: 'openai/gpt-4o-mini',
+                        messages: buildOptimizedContextArray(systemContext, userQuery),
+                        stream: true
+                    }),
+                    getHeaders: (key) => ({
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${key || 'MISSING_KEY'}`,
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': 'Canyon AI'
+                    })
+                },
+                {
+                    name: 'Google Gemini (1.5 Flash)',
+                    id: 'gemini',
+                    url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent',
+                    apiKey: Storage.get('gemini'),
+                    buildUrl: function () { return `${this.url}?alt=sse&key=${this.apiKey}`; },
+                    formatPayload: (systemContext, userQuery) => {
+                        // Gemini requires a slightly complex conversion of the array
+                        const optimizedHistory = buildOptimizedContextArray(systemContext, userQuery);
+                        // Convert to single string for fallback simplicity, or iterate
+                        const combinedText = optimizedHistory.map(m => `[${m.role.toUpperCase()}]:\n${m.content}`).join('\n\n');
+                        return { contents: [{ role: "user", parts: [{ text: combinedText }] }] };
+                    },
+                    getHeaders: () => ({ 'Content-Type': 'application/json' })
+                },
+                {
+                    name: 'Groq (LLaMA3)',
+                    id: 'groq',
+                    url: 'https://api.groq.com/openai/v1/chat/completions',
+                    apiKey: Storage.get('groq'),
+                    formatPayload: (systemContext, userQuery) => ({
+                        model: 'llama3-8b-8192',
+                        messages: buildOptimizedContextArray(systemContext, userQuery),
+                        stream: true
+                    }),
+                    getHeaders: (key) => ({
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${key || 'MISSING_KEY'}`
+                    })
+                }
+            ];
+        }
+
+        // Helper timeout function
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 6000 } = options;
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            const response = await fetch(resource, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return response;
+        }
+
+        // ================= Core DOM Logic =================
+        const chatForm = document.getElementById('chat-form');
+        const promptInput = document.getElementById('prompt-input');
+        const chatContainer = document.getElementById('chat-container');
+        const sourcesContainer = document.getElementById('sources-container');
+        const sourcesLoader = document.getElementById('sources-loader');
+        const sendBtn = document.getElementById('send-btn');
+
+        // Auto-resize
+        promptInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 144) + 'px';
+        });
+
+        // Enter to submit
+        promptInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Submit Process
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = promptInput.value.trim();
+            if (!query) return;
+
+            promptInput.value = '';
+            promptInput.style.height = 'auto';
+            sendBtn.disabled = true;
+
+            appendMessage('user', query);
+
+            let sources = [];
+            toggleSourceLoader(true);
+            try {
+                await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+                sources = generateSimulatedSearch(query);
+                renderSourcesData(sources);
+            } finally {
+                toggleSourceLoader(false);
+            }
+
+            const systemPrompt = `You are Canyon AI, a high-end intelligent search agent. Provide brief, cited responses formatted beautifully in Markdown. 
+Search Context:
+${sources.map((s, i) => `[${i + 1}] Title: ${s.title} | Snippet: ${s.snippet} | URL: ${s.url}`).join('\n')}`;
+
+            const aiResponseText = await generateAIResponse(query, systemPrompt);
+
+            // Save to memory arrays
+            chatHistory.push({ role: 'user', content: query });
+            if (aiResponseText) {
+                chatHistory.push({ role: 'assistant', content: aiResponseText });
+            }
+
+            sendBtn.disabled = false;
+        });
+
+        function appendMessage(role, rawContent) {
+            const wrapper = document.createElement('div');
+            const isUser = role === 'user';
+
+            wrapper.className = `flex space-x-4 animate-message pt-3 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
+
+            const iconHTML = isUser
+                ? `<div class="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30 text-primary shadow flex-col"><span class="text-sm font-bold leading-none">U</span></div>`
+                : `<div class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700 shadow shadow-neon/10"><svg class="w-5 h-5 text-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></div>`;
+
+            const parsedHTML = parseSimpleMarkdown(rawContent);
+
+            wrapper.innerHTML = `
+                ${iconHTML}
+                <div class="max-w-[85%] ${isUser ? 'bg-slate-800/60 px-5 py-3.5 rounded-2xl rounded-tr-sm border border-slate-700/50 shadow-sm' : 'pt-1.5'} text-slate-200">
+                    <div class="leading-relaxed text-[15px] base ai-content whitespace-pre-wrap">${parsedHTML}</div>
+                </div>
+            `;
+            chatContainer.appendChild(wrapper);
+            scrollToBottom();
+            return wrapper.querySelector('.ai-content');
+        }
+
+        // ================= AI Generation Loop =================
+        async function generateAIResponse(userQuery, systemInstructions) {
+            const messageContainer = appendMessage('assistant', '<span class="typing-dot inline-block w-2.5 h-2.5 mt-2 bg-neon rounded-full shadow-[0_0_8px_#38bdf8]"></span>');
+            const providers = getProviders();
+            let lastError = null;
+
+            // Pre-check: Are any keys actually saved?
+            const hasAnyKey = providers.some(p => p.apiKey && p.apiKey.length > 5);
+            if (!hasAnyKey) {
+                messageContainer.innerHTML = `<span class="text-orange-400 font-medium">Please set up your API keys in the Settings panel (Top Right) to start making live requests!</span>`;
+                return null;
+            }
+
+            for (let i = 0; i < providers.length; i++) {
+                const provider = providers[i];
+                if (!provider.apiKey || provider.apiKey.length < 5) continue;
+
+                try {
+                    messageContainer.innerHTML = `<span class="typing-dot inline-block w-2.5 h-2.5 bg-${i === 0 ? 'neon' : 'orange-[400]'} rounded-full shadow-[0_0_8px_currentColor]"></span> <span class="text-xs text-${i === 0 ? 'slate-400' : 'orange-400'} font-mono ml-2 animate-pulse">Connecting: ${provider.name}...</span>`;
+
+                    const targetUrl = provider.buildUrl ? provider.buildUrl() : provider.url;
+
+                    const response = await fetchWithTimeout(targetUrl, {
+                        method: 'POST',
+                        headers: provider.getHeaders(provider.apiKey),
+                        body: JSON.stringify(provider.formatPayload(systemInstructions, userQuery)),
+                        timeout: 7000
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status} from ${provider.name}`);
+
+                    messageContainer.innerHTML = '';
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    let fullStreamBuffer = '';
+
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+
+                        const chunkStr = decoder.decode(value, { stream: true });
+                        const lines = chunkStr.split('\n');
+
+                        for (const line of lines) {
+                            const cleanLine = line.trim();
+                            if (cleanLine === '' || cleanLine === 'data: [DONE]') continue;
+                            if (cleanLine.startsWith('data:')) {
+                                try {
+                                    const parsedData = JSON.parse(cleanLine.replace(/^data:\s*/, ''));
+                                    let textToken = provider.id === 'gemini'
+                                        ? (parsedData?.candidates?.[0]?.content?.parts?.[0]?.text || "")
+                                        : (parsedData.choices[0]?.delta?.content || "");
+
+                                    fullStreamBuffer += textToken;
+                                    messageContainer.innerHTML = parseSimpleMarkdown(fullStreamBuffer);
+                                    scrollToBottom();
+                                } catch (e) { }
+                            }
+                        }
+                    }
+                    console.log(`Success with ${provider.name}`);
+                    return fullStreamBuffer; // Return successful stream output for history array
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            // Fallback caught
+            messageContainer.innerHTML = `
+                <div class="text-red-400 bg-red-900/10 px-4 py-3.5 rounded-xl border border-red-900/40 text-sm flex items-start space-x-3">
+                    <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <div><strong class="block mb-1 text-red-300">Connection Failed</strong>All providers failed. Check your saved API tokens and ensure internet connectivity.</div>
+                </div>`;
+            return null;
+            scrollToBottom();
+        }
+
+        // ================= Mock Search Display =================
+        function generateSimulatedSearch(query) {
+            const words = query.replace(/[^\w\s]/gi, '').split(' ').filter(w => w.length > 2);
+            const mainTopic = words.length > 0 ? words.slice(0, 3).join(' ') : query;
+            const capitalizedTopic = mainTopic.charAt(0).toUpperCase() + mainTopic.slice(1);
+
+            return [
+                {
+                    title: `Defining the Future of ${capitalizedTopic}`,
+                    snippet: `Recent analysis shows that ${mainTopic} is driving incredible shifts in the industry. Experts agree that this subject requires close monitoring over the next decade.`,
+                    url: `https://www.forbes.example.com/trends/${encodeURIComponent(words[0] || 'data')}`,
+                    icon: '🔬'
+                },
+                {
+                    title: `Wikipedia: ${capitalizedTopic}`,
+                    snippet: `Encyclopedic entry documenting the deep dive history, technological mechanics, and fundamental structure regarding the concept.`,
+                    url: `https://en.wikipedia.org/wiki/${encodeURIComponent(words[0] || 'Tech')}`,
+                    icon: '🌐'
+                },
+                {
+                    title: `Hacker News Discussions: ${capitalizedTopic}`,
+                    snippet: `Engineers review the systemic applications of ${mainTopic}. Several commentators highlight optimization techniques and hardware considerations.`,
+                    url: `https://news.ycombinator.example.com/item?id=92918`,
+                    icon: '💻'
+                }
+            ];
+        }
+
+        function renderSourcesData(sourcesArr) {
+            sourcesContainer.innerHTML = '';
+            sourcesArr.forEach((src, idx) => {
+                const card = document.createElement('a');
+                card.href = src.url;
+                card.target = '_blank';
+                card.className = "flex items-start bg-slate-900/80 hover:bg-slate-800/90 border border-slate-700/60 p-4 rounded-xl transition-all duration-200 group relative overflow-hidden";
+                card.innerHTML = `
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transform -translate-x-full group-hover:translate-x-full transition-all duration-700 ease-out z-0"></div>
+                    <span class="text-xl mr-3 shrink-0 bg-slate-950/80 rounded border border-slate-800 p-1.5 shadow-inner z-10">${src.icon}</span>
+                    <div class="flex-grow z-10 w-full min-w-0">
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="bg-primary/20 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded leading-none shrink-0">${idx + 1}</span>
+                            <h3 class="text-sm font-semibold text-slate-100 group-hover:text-neon transition truncate">${src.title}</h3>
+                        </div>
+                        <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-1.5">${src.snippet}</p>
+                        <div class="text-[10px] text-slate-500 font-mono truncate w-full flex items-center opacity-70">
+                            <svg class="w-3 h-3 mr-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                            ${new URL(src.url).hostname}
+                        </div>
+                    </div>
+                `;
+                sourcesContainer.appendChild(card);
+            });
+        }
+
+        function toggleSourceLoader(show) {
+            sourcesLoader.classList.toggle('hidden', !show);
+            if (show) sourcesContainer.innerHTML = '';
+        }
+
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function parseSimpleMarkdown(text) {
+            if (!text) return "";
+            let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-bold text-slate-100 mt-4 mb-2">$1</h3>');
+            html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-slate-100 mt-5 mb-2">$1</h2>');
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
+            html = html.replace(/`([^`]+)`/g, '<code class="bg-slate-900 border border-slate-700/80 text-neon px-1.5 py-0.5 rounded text-sm font-mono shadow-sm">$1</code>');
+            html = html.replace(/\[(\d+)\]/g, '<span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 ml-0.5 text-[10px] font-bold text-slate-900 bg-primary rounded cursor-pointer hover:bg-neon transition shadow-[0_0_8px_rgba(14,165,233,0.4)] align-super relative -top-[2px]">$1</span>');
+            return html;
+        }
+
+    </script>
+</body>
+
+</html>
